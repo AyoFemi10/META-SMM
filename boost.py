@@ -135,6 +135,13 @@ def get_db():
 # TELEGRAM CLIENT SETUP
 # ============================================================================
 
+# Ensure an asyncio event loop exists before Pyrogram initializes
+try:
+    asyncio.get_running_loop()
+except RuntimeError:
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+
 app = Client(
     "engagement_bot",
     api_id=API_ID,
