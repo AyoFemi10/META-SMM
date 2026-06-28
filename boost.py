@@ -1033,4 +1033,12 @@ if __name__ == "__main__":
     
     # Start the bot
     print("✅ Bot starting... Press Ctrl+C to stop.")
+    
+    # Ensure a current asyncio event loop exists for Pyrogram on newer Python versions
+    try:
+        asyncio.get_running_loop()
+    except RuntimeError:
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+
     app.run()
