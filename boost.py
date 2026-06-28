@@ -1038,7 +1038,7 @@ async def process_admin_boost(boost_id: int, admin_id: int, channel: str, boost_
 # BOT STARTUP
 # ============================================================================
 
-if __name__ == "__main__":
+async def main():
     print("🚀 Initializing Telegram Engagement Bot...")
     
     # Initialize database
@@ -1052,3 +1052,6 @@ if __name__ == "__main__":
         await idle()
     finally:
         await app.stop()
+
+if __name__ == "__main__":
+    asyncio.run(main())
