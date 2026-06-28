@@ -199,9 +199,9 @@ async def check_force_join(user_id: int) -> Tuple[bool, List[str]]:
         except UserNotParticipant:
             missing.append(channel)
         except Exception as e:
-            # Channel might be invalid or bot not admin
+            # If we cannot verify membership, treat the channel as missing.
             print(f"Error checking {channel}: {e}")
-            continue
+            missing.append(channel)
     
     return len(missing) == 0, missing
 
@@ -359,9 +359,9 @@ async def handle_callbacks(client: Client, callback_query: CallbackQuery):
     user_id = callback_query.from_user.id
     data = callback_query.data
     
-    # Verify force join before proceeding
+    # Verify force join before proceeding (admins bypass the gate)
     all_joined, missing = await check_force_join(user_id)
-    if not all_joined and data not in ["force_join"]:
+    if user_id not in ADMIN_IDS and not all_joined and data not in ["force_join"]:
         missing_text = "\n".join([f"└ {ch}" for ch in missing])
         await callback_query.answer(
             f"⚠️ Join these channels first:\n{missing_text}",
@@ -569,6 +569,19 @@ temp_data = {}
 async def handle_channel_input(client: Client, message: Message):
     """Handle channel input for boost confirmation."""
     user_id = message.from_user.id
+    
+    # Enforce force-join for regular users
+    all_joined, missing = await check_force_join(user_id)
+    if user_id not in ADMIN_IDS and not all_joined:
+        missing_text = "\n".join([f"• {ch}" for ch in missing])
+        await message.reply_text(
+            f"⚠️ *Join Required*\n\n"
+            f"You must join the following channels before using the bot:\n"
+            f"{missing_text}\n\n"
+            f"_Then use /start and press Verify to continue._",
+            parse_mode=enums.ParseMode.MARKDOWN
+        )
+        return
     
     if temp_data.get(f"{user_id}_awaiting_channel"):
         channel_input = message.text.strip()
