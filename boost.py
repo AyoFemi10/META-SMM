@@ -831,8 +831,7 @@ async def show_admin_overview(callback_query: CallbackQuery):
     c.execute("SELECT SUM(quantity) FROM boosts WHERE boost_type = 'views' AND status = 'completed'")
     total_views = c.fetchone()[0] or 0
     
-    c.execute("SELECT SUM(quantity) 
-    FROM boosts WHERE boost_type = 'reactions' AND status = 'completed'")
+    c.execute("SELECT SUM(quantity) FROM boosts WHERE boost_type = 'reactions' AND status = 'completed'")
     total_reactions = c.fetchone()[0] or 0
     
     conn.close()
@@ -1035,4 +1034,3 @@ if __name__ == "__main__":
     # Start the bot
     print("✅ Bot starting... Press Ctrl+C to stop.")
     app.run()
-```
