@@ -336,15 +336,18 @@ async def start_command(client: Client, message: Message):
         )
         for ch in missing:
             welcome_text += f"   └ {ch}\n"
-        welcome_text += "\n_Come back after joining!_"
-    
-    # Build keyboard
-    keyboard = InlineKeyboardMarkup([
-        [InlineKeyboardButton("💰 My Balance", callback_data="balance"),
-         InlineKeyboardButton("👥 Referrals", callback_data="referrals")],
-        [InlineKeyboardButton("🚀 Boost Channel", callback_data="boost_menu")],
-        [InlineKeyboardButton("📊 Leaderboard", callback_data="leaderboard")]
-    ])
+        welcome_text += "\n_Once you've joined, tap the button below to verify._"
+
+        keyboard = InlineKeyboardMarkup([
+            [InlineKeyboardButton("✅ I've joined, check again", callback_data="force_join")]
+        ])
+    else:
+        keyboard = InlineKeyboardMarkup([
+            [InlineKeyboardButton("💰 My Balance", callback_data="balance"),
+             InlineKeyboardButton("👥 Referrals", callback_data="referrals")],
+            [InlineKeyboardButton("🚀 Boost Channel", callback_data="boost_menu")],
+            [InlineKeyboardButton("📊 Leaderboard", callback_data="leaderboard")]
+        ])
     
     await message.reply_text(
         welcome_text,
@@ -381,6 +384,17 @@ async def handle_callbacks(client: Client, callback_query: CallbackQuery):
         await show_boost_menu(callback_query, user_id)
     elif data == "leaderboard":
         await show_leaderboard(callback_query, user_id)
+    elif data == "force_join":
+        all_joined, missing = await check_force_join(user_id)
+        if all_joined:
+            await callback_query.answer("✅ All required channels are joined!", show_alert=True)
+            await show_main_menu(callback_query, user_id)
+        else:
+            missing_text = "\n".join([f"└ {ch}" for ch in missing])
+            await callback_query.answer(
+                f"⚠️ Still missing:\n{missing_text}",
+                show_alert=True
+            )
     elif data.startswith("boost_type_"):
         boost_type = data.replace("boost_type_", "")
         await show_boost_amount(callback_query, user_id, boost_type)
@@ -414,14 +428,14 @@ async def show_balance(callback_query: CallbackQuery, user_id: int):
     points, referrals = user_data
     
     text = (
-        f"💰 *Your Balance*\n\n"
-        f"Points: `{format_points(points)}`\n"
-        f"Referrals: `{referrals}`\n\n"
-        f"*Boost Costs:*\n"
-        f"└ 100 Subscribers — `500 points`\n"
-        f"└ 1,000 Views — `300 points`\n"
-        f"└ 50 Reactions — `200 points`\n\n"
-        f"_Use the Boost Menu to start!_"
+        f"� *Wallet Overview*\n\n"
+        f"💰 *Balance:* `{format_points(points)}`\n"
+        f"👥 *Referrals:* `{referrals}`\n\n"
+        f"*Boost Pricing:*\n"
+        f"• 100 Subscribers — `500 points`\n"
+        f"• 1,000 Views — `300 points`\n"
+        f"• 50 Reactions — `200 points`\n\n"
+        f"_Tap Boost Now to use your points._"
     )
     
     keyboard = InlineKeyboardMarkup([
@@ -446,16 +460,16 @@ async def show_referrals(callback_query: CallbackQuery, user_id: int):
     ref_code, referrals, points = user_data
     
     text = (
-        f"👥 *Your Referrals*\n\n"
+        f"👥 *Referral Rewards*\n\n"
         f"Total Referrals: `{referrals}`\n"
         f"Points Earned: `{format_points(referrals * POINTS_PER_REFERRAL)}`\n\n"
         f"*Your Referral Link:*\n"
         f"`https://t.me/{app.me.username}?start={ref_code}`\n\n"
         f"*How it works:*\n"
         f"1. Share your link\n"
-        f"2. Friends click and start the bot\n"
-        f"3. You earn `{POINTS_PER_REFERRAL}` points each!\n\n"
-        f"_Share on social media, groups, anywhere!_"
+        f"2. Friends start the bot\n"
+        f"3. You earn `{POINTS_PER_REFERRAL}` points per referral\n\n"
+        f"_Share anywhere and grow faster._"
     )
     
     keyboard = InlineKeyboardMarkup([
@@ -471,19 +485,19 @@ async def show_boost_menu(callback_query: CallbackQuery, user_id: int):
     
     text = (
         f"🚀 *Boost a Channel*\n\n"
-        f"💰 Your Balance: `{format_points(points)}` points\n\n"
-        f"*Select boost type:*\n"
-        f"└ 👥 Subscribers — `500 pts / 100`\n"
-        f"└ 👁 Views — `300 pts / 1,000`\n"
-        f"└ ❤️ Reactions — `200 pts / 50`\n\n"
-        f"_You'll be asked for the channel after selecting type._"
+        f"💰 *Balance:* `{format_points(points)}` points\n\n"
+        f"*Choose your boost type:*\n"
+        f"• 👥 Subscribers — `500 pts / 100`\n"
+        f"• 👁 Views — `300 pts / 1,000`\n"
+        f"• ❤️ Reactions — `200 pts / 50`\n\n"
+        f"_Pick a boost path and we will guide you through setup._"
     )
     
     keyboard = InlineKeyboardMarkup([
-        [InlineKeyboardButton("👥 Subscribers", callback_data="boost_type_subscribers")],
-        [InlineKeyboardButton("👁 Views", callback_data="boost_type_views")],
+        [InlineKeyboardButton("👥 Subscribers", callback_data="boost_type_subscribers"),
+         InlineKeyboardButton("👁 Views", callback_data="boost_type_views")],
         [InlineKeyboardButton("❤️ Reactions", callback_data="boost_type_reactions")],
-        [InlineKeyboardButton("⬅️ Back", callback_data="back_to_menu")]
+        [InlineKeyboardButton("🏠 Main Menu", callback_data="back_to_menu")]
     ])
     
     await callback_query.message.edit_text(text, reply_markup=keyboard, parse_mode=enums.ParseMode.MARKDOWN)
@@ -739,17 +753,17 @@ async def show_main_menu(callback_query: CallbackQuery, user_id: int):
     points, referrals = user_data if user_data else (0, 0)
     
     text = (
-        f"👋 *Welcome Back!*\n\n"
-        f"💰 Balance: `{format_points(points)}`\n"
-        f"👥 Referrals: `{referrals}`\n\n"
-        f"_What would you like to do?_"
+        f"✨ *Meta SMM Boost Menu*\n\n"
+        f"💰 *Balance:* `{format_points(points)}`\n"
+        f"👥 *Referrals:* `{referrals}`\n\n"
+        f"_Choose an action from the menu below:_"
     )
     
     keyboard = InlineKeyboardMarkup([
-        [InlineKeyboardButton("💰 My Balance", callback_data="balance"),
+        [InlineKeyboardButton("💰 Balance", callback_data="balance"),
          InlineKeyboardButton("👥 Referrals", callback_data="referrals")],
-        [InlineKeyboardButton("🚀 Boost Channel", callback_data="boost_menu")],
-        [InlineKeyboardButton("📊 Leaderboard", callback_data="leaderboard")]
+        [InlineKeyboardButton("🚀 Boost Channel", callback_data="boost_menu"),
+         InlineKeyboardButton("📊 Leaderboard", callback_data="leaderboard")]
     ])
     
     await callback_query.message.edit_text(text, reply_markup=keyboard, parse_mode=enums.ParseMode.MARKDOWN)
