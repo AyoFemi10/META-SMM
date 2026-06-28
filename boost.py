@@ -15,7 +15,7 @@ import time
 from datetime import datetime, timedelta
 from typing import Optional, Dict, List, Tuple
 
-from pyrogram import Client, filters, enums
+from pyrogram import Client, filters, enums, idle
 from pyrogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton, CallbackQuery, ChatMember
 from pyrogram.errors import UserNotParticipant, ChatAdminRequired, FloodWait
 
@@ -1047,4 +1047,8 @@ if __name__ == "__main__":
     
     # Start the bot
     print("✅ Bot starting... Press Ctrl+C to stop.")
-    app.run()
+    await app.start()
+    try:
+        await idle()
+    finally:
+        await app.stop()
